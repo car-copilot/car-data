@@ -1,0 +1,11 @@
+influx:
+  url: https://influxdb.example.com
+  org: car-copilot
+  token:
+
+postgres:
+  host: 127.0.0.1
+  port: 5432
+  user: car-copilot 
+  mdp: mdpexample
+  db: car-copilot

@@ -1,0 +1,8 @@
+fastapi
+influxdb_client
+numpy
+pyyaml
+scikit-learn
+pandas
+psycopg2-binary
+tensorflow[keras]
