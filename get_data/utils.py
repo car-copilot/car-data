@@ -88,9 +88,7 @@ def get_data_from_postgres_one_trip(conn, trip_id):
         SELECT 
             t.trip_id, 
             t.begin_timestamp, 
-            t.end_timestamp, 
-            t.style, 
-            t.economic, 
+            t.end_timestamp,
             o.bucket
         FROM 
             public.trip AS t
@@ -119,9 +117,7 @@ def get_data_from_postgres(conn):
         SELECT 
             t.trip_id, 
             t.begin_timestamp, 
-            t.end_timestamp, 
-            t.style, 
-            t.economic, 
+            t.end_timestamp,
             o.bucket
         FROM 
             public.trip AS t
