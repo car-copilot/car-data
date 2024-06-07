@@ -43,7 +43,7 @@ def query_influxdb(client, data_from_postgres):
     """
     start_time = int(data_from_postgres[1].timestamp())
     stop_time = int(data_from_postgres[2].timestamp())
-    bucket_name = data_from_postgres[5]
+    bucket_name = data_from_postgres[3]
     query = f"""
         from(bucket: "{bucket_name}")
         |> range(start: {start_time}, stop: {stop_time})
