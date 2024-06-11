@@ -1,6 +1,7 @@
 from get_data.utils import *
 import logging
 import pandas as pd
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +47,9 @@ def create_clean_dataframe(data_list):
     )
     df['Altitude difference'] = df['Altitude'].diff()
     df.drop(columns=['Altitude'], inplace=True)
+    if 'style' in df.columns :
+        df.dropna(subset=['style'], inplace=True)
+    logger.info(f"{df.describe()}")
     df = fill_nan(df)
     if 'Gear engaged' in df.columns:
         df['Gear engaged'] = df['Gear engaged'].astype(int)

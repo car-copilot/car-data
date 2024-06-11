@@ -102,6 +102,9 @@ def get_data_from_postgres_one_trip(conn, trip_id):
     cursor.execute(query, (trip_id,))
     return cursor.fetchall()
 
+import logging
+
+logger = logging.getLogger(__name__)
 def get_data_from_postgres(conn):
     """
     Retrieves data from a PostgreSQL database.
