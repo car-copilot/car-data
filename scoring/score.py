@@ -21,60 +21,26 @@ def create_data_point(row):
     point.field("score", row["score"])
     return point
 
-def find_best_k(X):
-        """
-        Finds the optimal number of clusters for KMeans using silhouette score within 2 to 8 clusters.
-
-        Args:
-            X (np.ndarray): The data to be clustered.
-
-        Returns:
-            int: The optimal number of clusters.
-        """
-        best_k = None
-        best_score = -1
-
-        for k in range(2, 8 + 1):
-            kmeans = KMeans(n_clusters=k)
-            kmeans.fit(X)
-            silhouette = silhouette_score(X, kmeans.labels_)
-
-            if silhouette > best_score:
-                best_k = k
-                best_score = silhouette
-
-        return best_k
-
-def add_env_with_K_means(X):
+def add_env(data):
     """
-    Performs preprocessing steps on the input data.
-
+    Adds environmental features to the data using model prediction
+    
     Args:
-        X (np.ndarray): The data to be preprocessed.
-
-    Returns:
-        np.ndarray: The preprocessed data with added cluster.
-    """
-
-    # Find the optimal number of clusters
-    best_k = find_best_k(X)
-    
-    # Perform KMeans clustering and add cluster labels as a new feature
-    kmeans = KMeans(n_clusters=best_k)
-    kmeans.fit(X)
-    X_with_clusters = np.hstack((X, kmeans.labels_.reshape(-1, 1)))
-    
-    # # Apply PCA to the data with clusters
-    # pca.fit(X_with_clusters)
-    # X_reduced = pca.transform(X_with_clusters)
-
-    # get number of features
-    n_features_X = X.shape[1]
-    n_clusters = best_k
-    n_pca_components = X_with_clusters.shape[1]
-    logger.info(f"Data preprocessed with {n_features_X} features in X, {n_clusters} clusters, and {n_pca_components} PCA components.")
+        data (np.array): The preprocessed data.
         
-    return X_with_clusters
+    Returns:
+        np.array: The data with environmental features added.
+    """
+    # Load the model
+    environment_model = load_model("out/environment_weights.keras")
+
+    # Predict the environmental features
+    env = environment_model.predict(data)
+    
+    # Add the environmental features to the data
+    data = np.concatenate((data, env), axis=1)
+    
+    return data
 
 logger = logging.getLogger(__name__) 
 
@@ -87,25 +53,24 @@ def add_score(influxdb_data):
     """
     # Preprocess the data
     scaler = StandardScaler()
-    preprocessed_data = scaler.fit_transform(influxdb_data)
-    
+    scaled_data = scaler.fit_transform(influxdb_data)
+    logger.info(f"Data scaled: {influxdb_data.describe()}")
     if 'environment' not in influxdb_data.columns:
-        # Add environmental features with KMeans clustering
-        preprocessed_data = add_env_with_K_means(preprocessed_data)
+        # Add environmental features
+        data_with_env = add_env(scaled_data)
         
         # Add the env to data
-        influxdb_data["environment"] = preprocessed_data[:, -1].astype(int)
+        influxdb_data["environment"] = data_with_env[:, -1].astype(int)
     
     # Load the model
-    model = load_model("out/weights.keras")
+    score_model = load_model("out/score_weights.keras")
     
     # Predict the driving score
-    score = model.predict(preprocessed_data)
+    score = score_model.predict(scaled_data)
     
     # Add the score to the data
     influxdb_data["style"] = score.astype(int)
     logger.info(f"Score added to trip {influxdb_data.describe()}.")
-    
     
     
     # Save the data to InfluxDB

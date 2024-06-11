@@ -2,7 +2,7 @@ from tensorflow.keras.models import Sequential # type: ignore
 from tensorflow.keras.layers import Dense, Dropout, Input # type: ignore
 import tensorflow as tf
 
-def create_model(input_dim):
+def create_model_for_score(input_dim):
     """
     Defines a neural network architecture for ecological driving score prediction.
 
@@ -26,6 +26,33 @@ def create_model(input_dim):
 
     # Compile the model with optimizer, loss function, and metrics
     model.compile(optimizer="adam", loss="mse", metrics=["mae"])
+    
+    return model
+
+def create_model_for_environment(input_dim):
+    """
+    Defines a neural network architecture for environment prediction.
+
+    Args:
+        input_dim (int): The number of features in the input layer.
+
+    Returns:
+        tensorflow.keras.models.Model: The compiled neural network model.
+    """
+    model = Sequential()
+
+    # Input layer with number of neurons equal to input_dim
+    model.add(Dense(units=input_dim, activation="relu", input_shape=(input_dim,)))
+    
+    # Hidden layer with 32 neurons, ReLU activation, and Dropout for regularization
+    model.add(Dense(units=32, activation="relu"))
+    model.add(Dropout(rate=0.2))  # Regularization with dropout
+    
+    # Output layer with a single neuron and softmax activation for classification
+    model.add(Dense(units=4, activation="softmax"))
+
+    # Compile the model with optimizer, loss function, and metrics
+    model.compile(optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"])
     
     return model
 
