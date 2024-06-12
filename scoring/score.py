@@ -47,7 +47,6 @@ def add_env(influxdb_data, scaled_data):
     Returns:
         np.array: The data with environmental features added.
     """
-    logger.info(f"Data columns before if: {influxdb_data.columns}")
     if 'environment' not in influxdb_data.columns:
         # Load the model
         environment_model = load_model("out/environment_weights.keras")
@@ -58,7 +57,6 @@ def add_env(influxdb_data, scaled_data):
             influxdb_data_copy.drop(columns=['Gear engaged'], inplace=True)
             scaled_data = StandardScaler().fit_transform(influxdb_data_copy)
         
-        logger.info(f"Data shape: {scaled_data.shape}")   
         # Predict the environmental features
         pred = environment_model.predict(scaled_data)
 
@@ -100,6 +98,14 @@ def add_score(influxdb_data, scaled_data):
 
 logger = logging.getLogger(__name__)
 
+def moving_average_smoothing(data, window_size):
+    smoothed_data = np.zeros_like(data)
+    for i in range(len(data)):
+        start_idx = max(0, i - window_size // 2)
+        end_idx = min(len(data), i + window_size // 2 + 1)
+        smoothed_data[i] = np.mean(data[start_idx:end_idx])
+    return smoothed_data
+
 def add_predictions(config_file, bucket_name, influxdb_data):
     """
     Adds a driving score to the data for a single trip.
@@ -116,6 +122,17 @@ def add_predictions(config_file, bucket_name, influxdb_data):
     # Add the driving score
     add_score(influxdb_data, scaled_data)
 
+    window_size = 5  # Smoothing window size
+    smoothed_data = moving_average_smoothing(influxdb_data['style'], window_size)
+    smoothed_data2 = moving_average_smoothing(influxdb_data['environment'], window_size)
+    
+    influxdb_data['style'] = smoothed_data
+    influxdb_data['environment'] = smoothed_data2
+    
+    # Round the values
+    influxdb_data['style'] = influxdb_data['style'].round()
+    influxdb_data['environment'] = influxdb_data['environment'].round()
+    
     # Save the data to InfluxDB
     write_in_influxdb(config_file, bucket_name, influxdb_data)
 
