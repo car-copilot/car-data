@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 from get_data.get_data_from_influx import get_influxdb_data_one_trip, get_influxdb_data_all_trips
 from AI.train import train_model
@@ -18,9 +19,10 @@ async def add_score_in_trip(trip_id: int):
 
 @api.get("/retrain_model")
 async def retrain_model():
-    influxdb_data_all_trips = get_influxdb_data_all_trips(config_file)
-    # # save to csv
-    influxdb_data_all_trips.to_csv("out/influxdb_data_all_trips.csv", index=False)
+    if not os.path.exists("out/influxdb_data_all_trips.csv"):
+        influxdb_data_all_trips = get_influxdb_data_all_trips(config_file)
+        # # save to csv
+        influxdb_data_all_trips.to_csv("out/influxdb_data_all_trips.csv", index=False)
     
     influxdb_data_all_trips = pd.read_csv("out/influxdb_data_all_trips.csv")
     train_model(influxdb_data_all_trips)
