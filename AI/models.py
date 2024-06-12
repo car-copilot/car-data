@@ -1,10 +1,10 @@
 from tensorflow.keras.models import Sequential # type: ignore
-from tensorflow.keras.layers import Dense, Dropout, Input # type: ignore
+from tensorflow.keras.layers import Dense, Dropout, Input, LSTM, Flatten # type: ignore
 import tensorflow as tf
 
-def create_model_for_score(input_dim):
+def create_model_for_score(input_dim, window_size):
     """
-    Defines a neural network architecture for ecological driving score prediction.
+    Defines a neural network architecture for driving score prediction.
 
     Args:
         input_dim (int): The number of features in the input layer.
@@ -13,18 +13,18 @@ def create_model_for_score(input_dim):
         tensorflow.keras.models.Model: The compiled neural network model.
     """
     model = Sequential()
-
     # Input layer with number of neurons equal to input_dim
-    model.add(Dense(units=input_dim, activation="relu", input_shape=(input_dim,)))
+    model.add(Input(shape=(window_size, input_dim)))
     
-    # Hidden layer with 32 neurons, ReLU activation, and Dropout for regularization
-    model.add(Dense(units=32, activation="relu"))
-    model.add(Dropout(rate=0.2))  # Regularization with dropout
+    # Hidden layer with 32 neurons, and Dropout for regularization
+    model.add(LSTM(units=64, return_sequences=True))
+    model.add(Dropout(rate=0.2))
     
-    # Hidden layer with 16 neurons, ReLU activation, and Dropout for regularization
-    # model.add(Dense(units=16, activation="relu"))
-    # model.add(Dropout(rate=0.2))  # Regularization with dropout
-       
+    model.add(LSTM(units=32, return_sequences=True))
+    model.add(Dropout(rate=0.2))
+    
+    model.add(Flatten())
+    
     # Output layer with a single neuron and linear activation for regression
     model.add(Dense(units=1, activation="linear"))
 
@@ -33,7 +33,7 @@ def create_model_for_score(input_dim):
     
     return model
 
-def create_model_for_environment(input_dim):
+def create_model_for_environment(input_dim, window_size):
     """
     Defines a neural network architecture for environment prediction.
 
@@ -44,50 +44,24 @@ def create_model_for_environment(input_dim):
         tensorflow.keras.models.Model: The compiled neural network model.
     """
     model = Sequential()
-
+    print(input_dim, window_size)
     # Input layer with number of neurons equal to input_dim
-    model.add(Dense(units=input_dim, activation="relu", input_shape=(input_dim,)))
+    model.add(Input(shape=(window_size, input_dim)))
     
-    # Hidden layer with 32 neurons, ReLU activation, and Dropout for regularization
-    model.add(Dense(units=32, activation="relu"))
-    model.add(Dropout(rate=0.2))  # Regularization with dropout
+    # Hidden layer with 32 neurons, and Dropout for regularization
+    model.add(LSTM(units=64, return_sequences=True))
+    model.add(Dropout(rate=0.2))
+    
+    model.add(LSTM(units=32, return_sequences=True))
+    model.add(Dropout(rate=0.2))
+    
+    model.add(Flatten())
     
     # Output layer with a single neuron and softmax activation for classification
     model.add(Dense(units=4, activation="softmax"))
 
     # Compile the model with optimizer, loss function, and metrics
     model.compile(optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"])
-    
-    return model
-
-def create_inference_model(input_dim=11):  # Model for inference with original features
-    """
-    Defines a neural network architecture for inference on original data.
-
-    Args:
-        input_dim (int, optional): The number of features in the original data. Defaults to 11.
-
-    Returns:
-        tensorflow.keras.models.Model: The compiled model for inference.
-    """
-    model = Sequential()
-
-    # Input layer with number of neurons equal to input_dim (original features)
-    model.add(Dense(units=Input(shape=(input_dim,)), activation="relu", input_shape=(input_dim,)))
-    model.add(Dropout(rate=0.2))  # Regularization with dropout
-    
-    # Hidden layer with 32 neurons, ReLU activation, and Dropout for regularization
-    model.add(Dense(units=64, activation="relu"))
-    model.add(Dropout(rate=0.2))  # Regularization with dropout
-    
-    # Hidden layer with 16 neurons, ReLU activation, and Dropout for regularization
-    model.add(Dense(units=16, activation="relu"))
-    
-    # Output layer with a single neuron and sigmoid activation for binary classification
-    model.add(Dense(units=1, activation="sigmoid"))
-    
-    # Compile the model with optimizer, loss function, and metrics
-    model.compile(optimizer="adam", loss="binary_crossentropy", metrics=["accuracy"])
     
     return model
 

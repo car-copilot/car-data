@@ -10,6 +10,28 @@ import numpy as np
 from get_data.get_data_from_influx import get_influxdb_data_one_trip
 from get_data.utils import load_config
 
+def create_windows(df, window_size):
+    """
+    This function creates sequences (windows) of data from a DataFrame.
+
+    Args:
+        df (pandas.DataFrame): The DataFrame containing your data.
+        window_size (int): The length of the window (number of time steps).
+        feature_columns (list): A list of column names representing features.
+
+    Returns:
+        list: A list of NumPy arrays, each representing a sequence (window) of data.
+    """
+    sequences = []
+    for i in range(len(df) - window_size + 1):
+        sequence = df.iloc[i:i+window_size]  # Select relevant features
+        sequences.append(sequence)
+    
+    # Pad the end of the sequences with zeros
+    for i in range(window_size - 1):
+        sequences.append(np.zeros_like(sequences[-1]))    
+    return sequences
+
 def write_in_influxdb(config_file, bucket_name, data):
     """
     Writes data to InfluxDB.
@@ -55,7 +77,7 @@ def add_env(influxdb_data, scaled_data):
         if environment_model.input_shape[1] != scaled_data.shape[1] and 'Gear engaged' in influxdb_data.columns:
             influxdb_data_copy = influxdb_data.copy()
             influxdb_data_copy.drop(columns=['Gear engaged'], inplace=True)
-            scaled_data = StandardScaler().fit_transform(influxdb_data_copy)
+            scaled_data = scaled_data[:, :, :-1]
         
         # Predict the environmental features
         pred = environment_model.predict(scaled_data)
@@ -64,8 +86,6 @@ def add_env(influxdb_data, scaled_data):
 
         # Add the env to data
         influxdb_data["environment"] = predicted_environment_labels
-        
-    return influxdb_data
 
 def add_score(influxdb_data, scaled_data):
     """
@@ -87,10 +107,10 @@ def add_score(influxdb_data, scaled_data):
             influxdb_data_copy = influxdb_data.copy()
             influxdb_data_copy.drop(columns=['environment'], inplace=True)
             influxdb_data_copy.drop(columns=['Gear engaged'], inplace=True)
-            scaled_data = StandardScaler().fit_transform(influxdb_data_copy)
+            scaled_data = scaled_data[:, :, :-2]
 
         # Predict the driving score
-        score = score_model.predict(scaled_data)
+        score = score_model.predict(scaled_data)[:, 0]
 
         # Add the score to data
         influxdb_data["style"] = score.astype(int)
@@ -113,18 +133,29 @@ def add_predictions(config_file, bucket_name, influxdb_data):
     Args:
         influxdb_data (pd.DataFrame): The data for a single trip from InfluxDB.
     """
+    model = load_model("out/score_weights.keras")
+    
+    if 'Gear engaged' in influxdb_data.columns and model.input_shape[1] != influxdb_data.columns.shape[0]:
+        influxdb_data.drop(columns=['Gear engaged'], inplace=True)
+        print(f"Gear engaged dropped")
+    
+    sequences = create_windows(influxdb_data, 5)
+    X_new = np.array(sequences)
+    X_new = np.stack(X_new)
+    
     # Preprocess the data
     scaler = StandardScaler()
-    scaled_data = scaler.fit_transform(influxdb_data)
+    scaled_data = scaler.fit_transform(X_new.reshape(-1, X_new.shape[2]))
+    scaled_data = scaled_data.reshape(-1, 5, X_new.shape[2])
     # Add environmental features
     add_env(influxdb_data, scaled_data)
 
     # Add the driving score
     add_score(influxdb_data, scaled_data)
 
-    window_size = 5  # Smoothing window size
-    smoothed_data = moving_average_smoothing(influxdb_data['style'], window_size)
-    smoothed_data2 = moving_average_smoothing(influxdb_data['environment'], window_size)
+    smoothing_window_size = 5  # Smoothing window size
+    smoothed_data = moving_average_smoothing(influxdb_data['style'], smoothing_window_size)
+    smoothed_data2 = moving_average_smoothing(influxdb_data['environment'], smoothing_window_size)
     
     influxdb_data['style'] = smoothed_data
     influxdb_data['environment'] = smoothed_data2

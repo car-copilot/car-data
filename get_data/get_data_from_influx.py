@@ -54,7 +54,6 @@ def create_clean_dataframe(data_list):
     
     df.dropna(thresh=3, axis=0, inplace=True)
     df.dropna(thresh=len(df.index)/2, axis=1, inplace=True)
-    logger.info(f"Number of nan values in each colmuns {df.isna().sum()}")
     
     df = fill_nan(df)
     
