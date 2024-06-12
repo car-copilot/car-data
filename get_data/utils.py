@@ -1,6 +1,7 @@
 import yaml
 from influxdb_client import InfluxDBClient
 import pandas as pd
+import psycopg2
 
 def load_config(config_file):
     """
@@ -63,7 +64,6 @@ def connect_postgres(config):
     Returns:
         psycopg2.extensions.connection: A connection object for interacting with the PostgreSQL database.
     """
-    import psycopg2
     return psycopg2.connect(
         host=config['postgres']['host'],
         port=config['postgres']['port'],

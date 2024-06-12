@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 def train_model(influxdb_data_all_trips):
     """
     Train the model with the data from all trips
-    """
+    """    
     X = np.array(influxdb_data_all_trips)
     features = X[:, :-2]
     y_environment = X[:, -2]
