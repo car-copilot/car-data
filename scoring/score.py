@@ -52,7 +52,11 @@ def add_env(influxdb_data, scaled_data):
     if 'environment' not in influxdb_data.columns:
         # Load the model
         environment_model = load_model("out/environment_weights.keras")
-
+        
+        # Check model input shape
+        if environment_model.input_shape[1] != scaled_data.shape[1] and 'Gear engaged' in influxdb_data.columns:
+            influxdb_data.drop(columns=['Gear engaged'], inplace=True)
+            scaled_data = StandardScaler().fit_transform(influxdb_data)
         # Predict the environmental features
         pred = environment_model.predict(scaled_data)
 
@@ -60,8 +64,7 @@ def add_env(influxdb_data, scaled_data):
 
         # Add the env to data
         influxdb_data["environment"] = predicted_environment_labels
-        logger.info(f"Score added to trip {influxdb_data.describe()}.")
-
+        
     return influxdb_data
 
 def add_score(influxdb_data, scaled_data):
@@ -77,6 +80,11 @@ def add_score(influxdb_data, scaled_data):
     """
     # Load the model
     score_model = load_model("out/score_weights.keras")
+    
+    # Check model input shape
+    if score_model.input_shape[1] != scaled_data.shape[1] and 'Gear engaged' in influxdb_data.columns:
+        influxdb_data.drop(columns=['Gear engaged'], inplace=True)
+        scaled_data = StandardScaler().fit_transform(influxdb_data)
 
     # Predict the driving score
     score = score_model.predict(scaled_data)
@@ -97,8 +105,7 @@ def add_predictions(config_file, bucket_name, influxdb_data):
     # Preprocess the data
     scaler = StandardScaler()
     scaled_data = scaler.fit_transform(influxdb_data)
-    logger.info(f"Data scaled: {influxdb_data.describe()}")
-
+    
     # Add environmental features
     add_env(influxdb_data, scaled_data)
 
