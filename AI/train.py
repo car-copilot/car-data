@@ -47,27 +47,24 @@ def train_model(influxdb_data_all_trips):
     X_test = scaler.fit_transform(X_test)
     y_environment_train = to_categorical(y_environment_train, num_classes=4)
     y_environment_test = to_categorical(y_environment_test, num_classes=4)
-    logger.info(f"y_environment_train: {y_environment_train}, y_environment_test: {y_environment_test}")
     
     # Train the environment model
     environment_model = create_model_for_environment(features.shape[1])
     environment_model.compile(optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"])
-    environment_model.fit(X_train, y_environment_train, epochs=20, batch_size=64, validation_data=(X_test, y_environment_test), verbose=1)  
+    environment_model.fit(X_train, y_environment_train, epochs=30, batch_size=64, validation_data=(X_test, y_environment_test), verbose=1)  
     
     # Evaluate the environment_model
     environment_model.evaluate(X_test, y_environment_test)
     environment_model.summary()
     
-    y_pred = environment_model.predict(X_test)
-    logger.info(f"y_pred: {y_pred}")
-    
     # Train the driving score model
     driving_score_model = create_model_for_score(features.shape[1])
     driving_score_model.compile(optimizer="adam", loss="mse", metrics=["mae"])
-    driving_score_model.fit(X_train, y_driving_score_train, epochs=20, batch_size=64, validation_data=(X_test, y_driving_score_test), verbose=1)
+    driving_score_model.fit(X_train, y_driving_score_train, epochs=30, batch_size=64, validation_data=(X_test, y_driving_score_test), verbose=1)
     
     # Evaluate the driving_score_model
     driving_score_model.evaluate(X_test, y_driving_score_test)
+    driving_score_model.summary()
 
 #     plot_learning_curves(history, title="Modèle MLP (avec une couche cachée, 32 neurones)")
 

@@ -19,11 +19,6 @@ async def add_score_in_trip(trip_id: int):
 
 @api.get("/retrain_model")
 async def retrain_model():
-    if not os.path.exists("out/influxdb_data_all_trips.csv"):
-        influxdb_data_all_trips = get_influxdb_data_all_trips(config_file)
-        # # save to csv
-        influxdb_data_all_trips.to_csv("out/influxdb_data_all_trips.csv", index=False)
-    
-    influxdb_data_all_trips = pd.read_csv("out/influxdb_data_all_trips.csv")
+    influxdb_data_all_trips = get_influxdb_data_all_trips(config_file)
     train_model(influxdb_data_all_trips)
     return "OK"

@@ -20,6 +20,10 @@ def create_model_for_score(input_dim):
     # Hidden layer with 32 neurons, ReLU activation, and Dropout for regularization
     model.add(Dense(units=32, activation="relu"))
     model.add(Dropout(rate=0.2))  # Regularization with dropout
+    
+    # Hidden layer with 16 neurons, ReLU activation, and Dropout for regularization
+    # model.add(Dense(units=16, activation="relu"))
+    # model.add(Dropout(rate=0.2))  # Regularization with dropout
        
     # Output layer with a single neuron and linear activation for regression
     model.add(Dense(units=1, activation="linear"))
@@ -102,14 +106,22 @@ def create_model_CNN_RNN(input_shape):
     # Convolutional layer with 32 filters, kernel size of 3, ReLU activation, and input shape
     model_cnn_rnn.add(tf.keras.layers.Conv1D(filters=32, kernel_size=3, activation='relu', input_shape=(input_shape, 1)))
     
+    # Convolutional layer with 64 filters, kernel size of 3, and ReLU activation
+    model_cnn_rnn.add(tf.keras.layers.Conv1D(filters=64, kernel_size=3, activation='relu'))
+    
     # Max pooling layer with pool size of 2
     model_cnn_rnn.add(tf.keras.layers.MaxPooling1D(pool_size=2))
     
+    model_cnn_rnn.add(tf.keras.layers.Flatten())
+    
+    # # Dense layer with 128 neurons and ReLU activation
+    # model_cnn_rnn.add(tf.keras.layers.Dense(128, activation='relu'))
+    
     # GRU layer with 32 neurons and recurrent dropout for regularization
-    model_cnn_rnn.add(tf.keras.layers.GRU(32, recurrent_dropout=0.2))
+    # model_cnn_rnn.add(tf.keras.layers.GRU(32, recurrent_dropout=0.2))
     
     # Dropout layer for regularization
-    model_cnn_rnn.add(tf.keras.layers.Dropout(0.2))
+    # model_cnn_rnn.add(tf.keras.layers.Dropout(0.2))
     
     # Output layer with a single neuron and linear activation for regression
     model_cnn_rnn.add(tf.keras.layers.Dense(1, activation='linear'))

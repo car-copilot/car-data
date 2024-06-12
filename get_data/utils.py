@@ -121,13 +121,16 @@ def get_data_from_postgres(conn):
             t.trip_id, 
             t.begin_timestamp, 
             t.end_timestamp,
-            o.bucket
+            o.bucket,
+            t.manual
         FROM 
             public.trip AS t
         JOIN 
             public.owners AS o
         ON 
             t.owner_id = o.owner_id
+        WHERE
+            manual = True
     """
     cursor.execute(query)
     return cursor.fetchall()
