@@ -6,14 +6,14 @@ from scoring.score import add_predictions
 from fastapi import FastAPI
 import logging
 
-config_file = "config.yaml"
+config_file = "config/config.yaml"
 logger = logging.getLogger(__name__)
 api = FastAPI()
 
 @api.get("/add_score_in_trip/{trip_id}")
 async def add_score_in_trip(trip_id: int):
     influxdb_data, bucket_name = get_influxdb_data_one_trip(config_file, trip_id)
-    
+
     add_predictions(config_file, bucket_name, influxdb_data)
     return "OK"
 
