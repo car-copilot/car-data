@@ -1,7 +1,6 @@
 from get_data.utils import *
 import logging
 import pandas as pd
-import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -51,9 +50,9 @@ def create_clean_dataframe(data_list):
     
     if 'style' in df.columns :
         df.dropna(subset=['style'], inplace=True)
-    
+    print(f"{df.isna().sum()}")
     df.dropna(thresh=3, axis=0, inplace=True)
-    df.dropna(thresh=len(df.index)/2, axis=1, inplace=True)
+    # df.dropna(thresh=len(df.index)/2, axis=1, inplace=True)
     
     df = fill_nan(df)
     
@@ -82,6 +81,8 @@ def get_influxdb_data_one_trip(config_file, trip_id):
     influxdb_data = query_influxdb(influxdb_client, data_from_postgres[0])
     data_list = influxdb_data_to_list(influxdb_data)
     df = create_clean_dataframe(data_list)
+    influxdb_client.close()
+    postgres_conn.close()
     return df, data_from_postgres[0][3]
 
 def get_influxdb_data_all_trips(config_file):
@@ -107,7 +108,7 @@ def get_influxdb_data_all_trips(config_file):
         data_list.append(influxdb_data_to_list(influxdb_data))
     flat_data_list = [record for trip in data_list for record in trip]
     df = create_clean_dataframe(flat_data_list)
-    if postgres_conn:
-        postgres_conn.close()
+    postgres_conn.close()
+    influxdb_client.close()
     return df
 

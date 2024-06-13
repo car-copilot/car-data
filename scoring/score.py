@@ -1,14 +1,11 @@
-import pprint
-from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import silhouette_score
 from tensorflow.keras.models import load_model # type: ignore
 from influxdb_client import InfluxDBClient, Point
 import logging
 import numpy as np
-
-from get_data.get_data_from_influx import get_influxdb_data_one_trip
 from get_data.utils import load_config
+
+WINDOW_SIZE = 7
 
 def create_windows(df, window_size):
     """
@@ -32,6 +29,20 @@ def create_windows(df, window_size):
         sequences.append(np.zeros_like(sequences[-1]))    
     return sequences
 
+def data_chunks(data, chunk_size):
+    """
+    Splits the data into chunks of a specified size.
+
+    Args:
+        data (pd.DataFrame): The data to split into chunks.
+        chunk_size (int): The size of each chunk.
+
+    Returns:
+        list: A list of data chunks.
+    """
+    for i in range(0, len(data), chunk_size):
+        yield data.iloc[i:i + chunk_size]
+
 def write_in_influxdb(config_file, bucket_name, data):
     """
     Writes data to InfluxDB.
@@ -48,15 +59,14 @@ def write_in_influxdb(config_file, bucket_name, data):
     write_api = client.write_api()
     for i, row in data.iterrows():
         if row["measurement"] in ["style", "environment"]:
-            # show progress
-            if i % 100 == 0:
-                print(f"Writing row {i} of {len(data)}")
             data_point = Point(row["measurement"]).time(row["time"])
             for key, value in row.items():
                 if key not in ['time', 'measurement']:
                     data_point = data_point.field("value", value)
 
             write_api.write(bucket=bucket_name, org=config['influx']['org'], record=data_point)
+    print(f"Data written to InfluxDB.")
+    client.close()
 
 def add_env(influxdb_data, scaled_data):
     """
@@ -72,12 +82,6 @@ def add_env(influxdb_data, scaled_data):
     if 'environment' not in influxdb_data.columns:
         # Load the model
         environment_model = load_model("out/environment_weights.keras")
-        
-        # Check model input shape
-        if environment_model.input_shape[1] != scaled_data.shape[1] and 'Gear engaged' in influxdb_data.columns:
-            influxdb_data_copy = influxdb_data.copy()
-            influxdb_data_copy.drop(columns=['Gear engaged'], inplace=True)
-            scaled_data = scaled_data[:, :, :-1]
         
         # Predict the environmental features
         pred = environment_model.predict(scaled_data)
@@ -101,13 +105,6 @@ def add_score(influxdb_data, scaled_data):
     if 'style' not in influxdb_data.columns:
         # Load the model
         score_model = load_model("out/score_weights.keras")
-        
-        # Check model input shape
-        if score_model.input_shape[1] != scaled_data.shape[1] and 'Gear engaged' in influxdb_data.columns:
-            influxdb_data_copy = influxdb_data.copy()
-            influxdb_data_copy.drop(columns=['environment'], inplace=True)
-            influxdb_data_copy.drop(columns=['Gear engaged'], inplace=True)
-            scaled_data = scaled_data[:, :, :-2]
 
         # Predict the driving score
         score = score_model.predict(scaled_data)[:, 0]
@@ -133,27 +130,21 @@ def add_predictions(config_file, bucket_name, influxdb_data):
     Args:
         influxdb_data (pd.DataFrame): The data for a single trip from InfluxDB.
     """
-    model = load_model("out/score_weights.keras")
-    
-    if 'Gear engaged' in influxdb_data.columns and model.input_shape[1] != influxdb_data.columns.shape[0]:
-        influxdb_data.drop(columns=['Gear engaged'], inplace=True)
-        print(f"Gear engaged dropped")
-    
-    sequences = create_windows(influxdb_data, 5)
+    sequences = create_windows(influxdb_data, WINDOW_SIZE)
     X_new = np.array(sequences)
     X_new = np.stack(X_new)
     
     # Preprocess the data
     scaler = StandardScaler()
     scaled_data = scaler.fit_transform(X_new.reshape(-1, X_new.shape[2]))
-    scaled_data = scaled_data.reshape(-1, 5, X_new.shape[2])
+    scaled_data = scaled_data.reshape(-1, WINDOW_SIZE, X_new.shape[2])
     # Add environmental features
     add_env(influxdb_data, scaled_data)
 
     # Add the driving score
     add_score(influxdb_data, scaled_data)
 
-    smoothing_window_size = 5  # Smoothing window size
+    smoothing_window_size = 10  # Smoothing window size
     smoothed_data = moving_average_smoothing(influxdb_data['style'], smoothing_window_size)
     smoothed_data2 = moving_average_smoothing(influxdb_data['environment'], smoothing_window_size)
     
@@ -166,6 +157,3 @@ def add_predictions(config_file, bucket_name, influxdb_data):
     
     # Save the data to InfluxDB
     write_in_influxdb(config_file, bucket_name, influxdb_data)
-
-    # logger.info(f"Score added to trip {influxdb_data['trip_id'].iloc[0]}.")
-    # logger.info(f"Data with score: {get_influxdb_data_one_trip(config_file, influxdb_data['trip_id'].iloc[0])}")
