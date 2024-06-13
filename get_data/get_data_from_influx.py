@@ -47,7 +47,6 @@ def create_clean_dataframe(data_list):
     
     df['Altitude difference'] = df['Altitude'].diff()
     df.drop(columns=['Altitude'], inplace=True)
-    
     if 'style' in df.columns :
         df.dropna(subset=['style'], inplace=True)
     print(f"{df.isna().sum()}")

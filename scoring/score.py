@@ -144,7 +144,13 @@ def add_predictions(config_file, bucket_name, influxdb_data):
     # Add the driving score
     add_score(influxdb_data, scaled_data)
 
-    smoothing_window_size = 10  # Smoothing window size
+    smoothing_window_size = 5  # Smoothing window size
+    smoothed_data = moving_average_smoothing(influxdb_data['style'], smoothing_window_size)
+    smoothed_data2 = moving_average_smoothing(influxdb_data['environment'], smoothing_window_size)
+    
+    influxdb_data['style'] = smoothed_data
+    influxdb_data['environment'] = smoothed_data2
+    
     smoothed_data = moving_average_smoothing(influxdb_data['style'], smoothing_window_size)
     smoothed_data2 = moving_average_smoothing(influxdb_data['environment'], smoothing_window_size)
     
