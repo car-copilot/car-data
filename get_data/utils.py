@@ -1,6 +1,5 @@
 import yaml
 from influxdb_client import InfluxDBClient
-import pandas as pd
 import psycopg2
 
 def load_config(config_file):

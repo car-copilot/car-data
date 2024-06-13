@@ -1,5 +1,3 @@
-import os
-import pandas as pd
 from get_data.get_data_from_influx import get_influxdb_data_one_trip, get_influxdb_data_all_trips
 from AI.train import train_model
 from scoring.score import add_predictions
