@@ -21,7 +21,7 @@ def create_model_for_score(input_dim, window_size):
     model.add(Dropout(rate=0.2))
     
     model.add(LSTM(units=32, return_sequences=True))
-    model.add(Dropout(rate=0.2))
+    # model.add(Dropout(rate=0.2))
     
     model.add(Flatten())
     
@@ -53,7 +53,7 @@ def create_model_for_environment(input_dim, window_size):
     model.add(Dropout(rate=0.2))
     
     model.add(LSTM(units=32, return_sequences=True))
-    model.add(Dropout(rate=0.2))
+    # model.add(Dropout(rate=0.2))
     
     model.add(Flatten())
     
